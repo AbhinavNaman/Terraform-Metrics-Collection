@@ -1,0 +1,18 @@
+# CODEOWNERS for Pluralsight
+# Last updated: April 2025
+
+[Meta][1] @pluralsight/experience/infrastructure/devops
+**/CODEOWNERS
+
+[CI/CD][1] @pluralsight/experience/infrastructure/devops
+**/*gitlab*
+**/*ci.yml
+**/*ci.yaml
+**codedeploy**
+**/Dockerfile
+
+[Infrastructure][1] @pluralsight/experience/infrastructure/devops
+**/*.tf
+**/*values*.yaml
+**/*values*.yml
+**/cdk/**
