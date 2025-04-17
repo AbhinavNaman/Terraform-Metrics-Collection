@@ -1,0 +1,8 @@
+{
+  "version": 3,
+  "team": "exp_devops",
+  "jira-project-key": "ITCDEV",
+  "slack-channel": "#ps-itc-devops-team",
+  "in-use": true,
+  "bc": "common_services"
+}
