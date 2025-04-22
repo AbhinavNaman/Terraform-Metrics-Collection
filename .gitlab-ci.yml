@@ -1,0 +1,2 @@
+include:
+  - component: gitlab.com/pluralsight/Technology/ci-catalog/gitlab/merge-request-title-check@1.0.1
