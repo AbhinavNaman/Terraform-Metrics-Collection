@@ -1,0 +1,15 @@
+# version: "3.7"
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: terraform_grafana_dashboard
+    ports:
+      - "3100:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./dashboards:/var/lib/grafana/dashboards
+    restart: always
