@@ -1,0 +1,108 @@
+name: Terraform Apply, log parsing, metrics extraction and storing data in DB
+
+on:
+  # push:
+  #   branches:
+  #     - dark-matter
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    # ubuntu-latest comes with AWS CLI preinstalled
+    env:
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+      LOG_FILE: /logs/apply.json
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      TF_VAR_AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+      TF_VAR_AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          ref: 'upskilling'
+
+      - name: install terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.0
+
+      - name: Create logs directory
+        run: mkdir -p logs
+
+      # - name: Set up SSH key from secret
+      #   run: |
+      #     mkdir -p ~/.ssh
+      #     echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+      #     chmod 600 ~/.ssh/id_rsa
+      #     echo "SSH Key set up from secret"
+
+      - name: Terraform Format Check
+        run: terraform fmt -recursive
+
+      - name: Commit and push fmt changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "GITHUB BOT: auto formated terraform files"
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: terraform Apply
+        run: terraform apply -auto-approve -json | tee logs/apply.json
+        env:
+          TF_VAR_OPENSSH_PRIVATE_KEY: ${{ secrets.OPENSSH_PRIVATE_KEY }}
+          TF_VAR_OPENSSH_PUBLIC_KEY: ${{ secrets.OPENSSH_PUBLIC_KEY }}
+          TF_VAR_AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          TF_VAR_AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+
+      # - name: terraform destroy
+      #   run: terraform destroy -auto-approve
+      #   env:
+      #     TF_VAR_OPENSSH_PRIVATE_KEY: ${{ secrets.OPENSSH_PRIVATE_KEY }}
+      #     TF_VAR_OPENSSH_PUBLIC_KEY: ${{ secrets.OPENSSH_PUBLIC_KEY }}
+      #     TF_VAR_AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+      #     TF_VAR_AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+
+      - name: pulling terraform-log-parser image from dockerHub
+        run: docker pull abhinavnaman/terraform-log-parser:log-parser3
+
+      - name: running the container (terraform-log-parser)
+        run: |
+          docker run --rm \
+           --name log-parser \
+           -e POSTGRES_HOST=${{ secrets.POSTGRES_HOST }} \
+           -e POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+           -e POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
+           -e POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
+           -e BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
+           -e LOG_FILE="/logs/apply.json" \
+           -v $(pwd)/logs:/logs \
+           abhinavnaman/terraform-log-parser:log-parser3
+
+      - name: printing team name
+        run: |
+          echo "Team name: ${{ github.head_ref || github.ref_name }}"
+
+      - name: uploading apply.json to s3
+        run: |
+          aws s3 cp logs/apply.json s3://remote-backend-abhinav/Terraform-Apply-logs/${{ github.ref_name }}/apply.json
+        env: 
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          AWS_DEFAULT_REGION: "us-east-1"
