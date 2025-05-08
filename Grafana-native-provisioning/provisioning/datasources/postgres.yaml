@@ -5,7 +5,7 @@ datasources:
     type: postgres
     uid: postgresdb-uid
     access: proxy
-    url: postgresdb.cn0m6q84wtgw.us-east-1.rds.amazonaws.com:5432
+    url: postgresdb.cvmwm8sqkpae.us-east-1.rds.amazonaws.com:5432
     database: postgresdb
     user: postgresdb
     secureJsonData:

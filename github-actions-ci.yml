@@ -24,6 +24,7 @@ jobs:
       TF_VAR_AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
       TF_VAR_AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
       BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+      TF_WORKSPACE: "dev" # Prod/Staging/Dev
 
     steps:
       - name: Checkout Code
@@ -63,6 +64,9 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: Geting the terraform workspace
+        run: echo "TF_WORKSPACE=$(terraform workspace show)" >>$GITHUB_ENV
+
       - name: terraform Apply
         run: terraform apply -auto-approve -json | tee logs/apply.json
         env:
@@ -91,6 +95,7 @@ jobs:
            -e POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
            -e POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
            -e BRANCH_NAME=${{ github.head_ref || github.ref_name }} \
+           -e TF_WORKSPACE=${{ env.TF_WORKSPACE }} \
            -e LOG_FILE="/logs/apply.json" \
            -v $(pwd)/logs:/logs \
            abhinavnaman/terraform-log-parser:log-parser3
