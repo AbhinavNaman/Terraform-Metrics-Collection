@@ -5,7 +5,6 @@ import pg from 'pg'
 //internal imports
 import {MetricsData, terraformRun} from "../types/metricsData.js"
 import { Resource_bucket } from '../types/logEntry.js';
-// import {formatPGArray, formatPGJsonArray} from "../utils/index.js"
 
 
 const { Client } = pg
@@ -20,16 +19,7 @@ const client = new Client({
 });
 
 const team = process.env.BRANCH_NAME
-
-//process.env.BRANCH_NAME
-
-// const client = new Client({
-//   user: "postgresdb",
-//   host: "postgresdb.cnqksm4yy7nf.us-east-1.rds.amazonaws.com",
-//   database: "postgresdb",
-//   password: "postgresdb",
-//   port: 5432,
-// });
+const env = process.env.TF_WORKSPACE
 
 client.connect()
     .then(() => console.log("PostgreSQL Connected!"))
@@ -60,7 +50,8 @@ export const addMetrics = async (terraformRun_data: terraformRun, created_resour
         terraformRun_data.total_time,
         terraformRun_data.applied_resources,
         final_failed_resources, //📌📌📌📌📌📌📌📌📌📌📌📌📌📌📌📌📌📌📌
-        team
+        team,
+        env
       ]
 
     const resources_query = `
